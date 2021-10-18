@@ -57,7 +57,7 @@ object TastyData {
     bytes: Bytes
   )
 
-  def read(bytes: Array[Byte]): TastyData = {
+  def read(bytes: Array[Byte])(implicit compilerVersion: TastyVersion): TastyData = {
 
     val headerReader = new TastyReader(bytes)
     val id           = new TastyHeaderUnpickler(headerReader).readHeader()

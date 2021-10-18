@@ -1,9 +1,16 @@
 package scala.build.postprocessing
 
-import scala.build.tastylib.TastyData
+import scala.build.tastylib.{TastyData, TastyVersion}
 import scala.build.{GeneratedSource, Logger}
 
-case object TastyPostProcessor extends PostProcessor {
+object TastyPostProcessor {
+
+  def apply(scalaVersion: String): Option[TastyPostProcessor] =
+    TastyVersion.parse(scalaVersion).map(TastyPostProcessor(_))
+}
+
+case class TastyPostProcessor(compilerVersion: TastyVersion) extends PostProcessor {
+
   def postProcess(
     generatedSources: Seq[GeneratedSource],
     mappings: Map[String, (String, Int)],
@@ -11,6 +18,8 @@ case object TastyPostProcessor extends PostProcessor {
     output: os.Path,
     logger: Logger
   ): Unit = {
+
+    implicit val myCompilerVersion: TastyVersion = compilerVersion
 
     val updatedPaths = generatedSources
       .flatMap { source =>

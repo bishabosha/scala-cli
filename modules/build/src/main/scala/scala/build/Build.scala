@@ -616,7 +616,10 @@ object Build {
         logger,
         inputs.workspace,
         updateSemanticDbs = true,
-        updateTasty = project.scalaCompiler.scalaVersion.startsWith("3.")
+        updateTasty = {
+          val v = project.scalaCompiler.scalaVersion
+          if (v.startsWith("3.")) Some(v) else None
+        }
       )
 
       Successful(
@@ -650,7 +653,7 @@ object Build {
     logger: Logger,
     workspace: os.Path,
     updateSemanticDbs: Boolean,
-    updateTasty: Boolean
+    updateTasty: Option[String]
   ): Unit = {
 
     // TODO Write classes to a separate directory during post-processing
@@ -668,7 +671,7 @@ object Build {
     val postProcessors =
       Seq(ByteCodePostProcessor) ++
         (if (updateSemanticDbs) Seq(SemanticDbPostProcessor) else Nil) ++
-        (if (updateTasty) Seq(TastyPostProcessor) else Nil)
+        (updateTasty.flatMap(TastyPostProcessor(_)).toSeq)
 
     for (p <- postProcessors)
       p.postProcess(generatedSources, mappings, workspace, classesDir, logger)

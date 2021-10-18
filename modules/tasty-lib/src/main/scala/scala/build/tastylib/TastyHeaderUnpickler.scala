@@ -16,13 +16,14 @@ package scala.build.tastylib
 
 import java.util.UUID
 
-import scala.build.tastylib.TastyFormat.{ExperimentalVersion, MajorVersion, MinorVersion, header}
+import scala.build.tastylib.TastyFormat.header
 
-class TastyHeaderUnpickler(reader: TastyReader) {
+class TastyHeaderUnpickler(reader: TastyReader)(implicit compilerVersion: TastyVersion) {
   import TastyHeaderUnpickler._
   import reader._
 
-  def this(bytes: Array[Byte]) = this(new TastyReader(bytes))
+  def this(bytes: Array[Byte])(implicit compilerVersion: TastyVersion) =
+    this(new TastyReader(bytes))
 
   /** reads and verifies the TASTy version, extracting the UUID */
   def readHeader(): UUID = {
@@ -46,14 +47,7 @@ class TastyHeaderUnpickler(reader: TastyReader) {
         start
       }
 
-      val validVersion = TastyFormat.isVersionCompatible(
-        fileMajor = fileMajor,
-        fileMinor = fileMinor,
-        fileExperimental = fileExperimental,
-        compilerMajor = MajorVersion,
-        compilerMinor = MinorVersion,
-        compilerExperimental = ExperimentalVersion
-      )
+      val validVersion = compilerVersion.canRead(fileMajor, fileMinor, fileExperimental)
 
       check(
         validVersion, {
@@ -63,7 +57,7 @@ class TastyHeaderUnpickler(reader: TastyReader) {
             s"\nThe TASTy file was produced by $toolingVersion.$toolingAddendum"
           val msg =
             if (fileExperimental != 0) unstableAddendum
-            else if (fileMajor < MajorVersion) backIncompatAddendum
+            else if (fileMajor < compilerVersion.major) backIncompatAddendum
             else forwardIncompatAddendum
           signature + msg + producedByAddendum
         }
@@ -79,20 +73,20 @@ class TastyHeaderUnpickler(reader: TastyReader) {
 
 object TastyHeaderUnpickler {
 
-  private def toolingAddendum =
-    if (ExperimentalVersion > 0)
+  private def toolingAddendum(implicit compilerVersion: TastyVersion) =
+    if (compilerVersion.experimental > 0)
       "\nNote that your tooling is currently using an unstable TASTy version."
     else ""
 
-  private def signatureString(fileMajor: Int, fileMinor: Int, fileExperimental: Int) = {
+  private def signatureString(fileMajor: Int, fileMinor: Int, fileExperimental: Int)(implicit compilerVersion: TastyVersion) = {
     def showMinorVersion(min: Int, exp: Int) = {
       val expStr = if (exp == 0) "" else s" [unstable release: $exp]"
       s"$min$expStr"
     }
-    val minorVersion     = showMinorVersion(MinorVersion, ExperimentalVersion)
+    val minorVersion     = showMinorVersion(compilerVersion.minor, compilerVersion.experimental)
     val fileMinorVersion = showMinorVersion(fileMinor, fileExperimental)
     s"""TASTy signature has wrong version.
-       | expected: {majorVersion: $MajorVersion, minorVersion: $minorVersion}
+       | expected: {majorVersion: ${compilerVersion.major}, minorVersion: $minorVersion}
        | found   : {majorVersion: $fileMajor, minorVersion: $fileMinorVersion}
        |
        |""".stripMargin

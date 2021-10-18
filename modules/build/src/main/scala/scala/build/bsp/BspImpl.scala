@@ -185,7 +185,7 @@ final class BspImpl(
                     logger,
                     inputs.workspace,
                     updateSemanticDbs = true,
-                    updateTasty = true
+                    updateTasty = buildOptions.scalaOptions.scalaVersion.orElse(Some("3.0.0"))
                   )
                   res
                 },

@@ -111,7 +111,7 @@ private class TastyUnpickler(reader: TastyReader) { self =>
     (result, new Bytes(bytes, initialPos, index(end)))
   }
 
-  def readHeader(): Unit = new TastyHeaderUnpickler(reader).readHeader()
+  def readHeader()(implicit compilerVersion: TastyVersion): Unit = new TastyHeaderUnpickler(reader).readHeader()
 
   def readNames(): Bytes = {
     val preambleStart = pos
